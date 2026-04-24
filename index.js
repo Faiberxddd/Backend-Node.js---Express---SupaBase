@@ -62,7 +62,7 @@ app.get("/usuarios", async (req, res) => {
 });
 
 //ruta para crear un nuevo usuario
-app.post("/crear", async (req, res) => {
+app.post("/usuarios", async (req, res) => {
     //tomamos los campos de la db
     const { nombre, apellido, telefono,  correo, rol } = req.body;
 
@@ -130,7 +130,11 @@ app.put("/usuarios/:id", async (req, res) => {
         .select();
 
     console.log("DB", data);
-    console.log("ERROR", error);
+    if (error) {
+        console.error("❌ Error:", error);
+    } else {
+        console.log("✅ Modificacion exitosa");
+    }
 
     if (error) {
         return res.status(500).json({ error });
@@ -164,7 +168,11 @@ app.delete("/usuarios/:id", async (req, res) => {
         .select();
     
     console.log("DB", data);
-    console.log("ERROR", error);
+    if (error) {
+        console.error("❌ Error:", error);
+    } else {
+        console.log("✅ Eliminación exitosa");
+    }
 
     if (error) {
         return res.status(500).json({ error });
@@ -180,6 +188,153 @@ app.delete("/usuarios/:id", async (req, res) => {
     })
 });
 
+
+app.get("/pedidos", async (req, res) => {
+    const { data, error } = await supabase
+        .from("pedidos")
+        .select("*");
+
+    if (error) {
+        console.error("❌ Error al obtener los pedidos:", error);
+        return res.status(500).json({ error });
+    }
+
+    //Mostrar en consola
+    console.log("✅ Pedidos obtenidos:", data);
+
+    //Respuesta al cliente (1 vez)
+    res.json({
+        total: data.length,
+        pedidos: data
+    })
+});
+
+//ruta para crear un nuevo pedido
+app.post("/pedidos", async (req, res) => {
+    //tomamos los campos de la db
+    const { descripcion, cantidad, total,  usuario_id, fecha_pedido } = req.body;
+
+    //verificamos que los campos no esten vacios
+    if (!descripcion || !cantidad || !total || !usuario_id || !fecha_pedido) {
+        console.error("❌ Faltan datos");
+        return res.status(400).json({ error: "Faltan datos" });
+    }
+
+    //insertamos los datos en la db
+    const { data, error } = await supabase
+        .from("pedidos")
+        .insert([
+            { descripcion, cantidad, total, usuario_id, fecha_pedido }
+        ])
+        .select();
+
+    //verificamos si hay error
+    if (error) {
+        console.error("❌ Error al crear pedido:", error);
+        return res.status(500).json({ error });
+    }
+
+    //Mostrar en consola
+    console.log("✅ Pedido creado con exito");
+
+    //Respuesta al cliente (1 vez)
+    res.json({
+        mensaje: "✅ Pedido creado con exito",
+        pedidos: data[0]
+    })
+});
+
+//ruta para los datos de un db
+app.put("/pedidos/:id", async (req, res) => {
+    
+    console.log("BODY UPDATE:", req.body);
+
+    const { id } = req.params;
+    const { descripcion, cantidad, total, usuario_id, fecha_pedido } = req.body;
+
+    //validar id
+    if (!id) {
+        return res.status(400).json({ error: "Falta el id" });
+    }
+
+    //validar que llegue almenos un dato
+    if (!descripcion && !cantidad && !total && !usuario_id && !fecha_pedido) {
+        return res.status(400).json({ error: "Faltan datos" });
+    }
+    
+    //construir objeto dinamico
+    const actualizarDatos = {}
+    if (descripcion) actualizarDatos.descripcion = descripcion;
+    if (cantidad) actualizarDatos.cantidad = cantidad;
+    if (total) actualizarDatos.total = total;
+    if (usuario_id) actualizarDatos.usuario_id = usuario_id;
+    if (fecha_pedido) actualizarDatos.fecha_pedido = fecha_pedido;
+
+    //actualizar pedido
+    const { data, error } = await supabase
+        .from("pedidos")
+        .update(actualizarDatos)
+        .eq("id", id)
+        .select();
+
+    console.log("DB", data);
+    if (error) {
+        console.error("❌ Error:", error);
+    } else {
+        console.log("✅ Modificacion exitosa");
+    }
+
+    if (error) {
+        return res.status(500).json({ error });
+    }
+
+    if (!data || data.length === 0) {
+        return res.status(404).json({ error: "Pedido no encontrado" });
+    }
+
+    res.json({
+        mensaje: "✅ Datos actualizados con exito",
+        pedidos: data[0]
+    })
+});
+
+//ruta para eliminar un pedido
+app.delete("/pedidos/:id", async (req, res) => {
+
+    const { id } = req.params;
+
+    //validar id
+    if (!id) {
+        return res.status(400).json({ error: "Falta el id" });
+    }
+
+    //eliminar pedido
+    const { data, error } = await supabase
+        .from("pedidos")
+        .delete()
+        .eq("id", id)
+        .select();
+    
+    console.log("DB", data);
+    if (error) {
+        console.error("❌ Error:", error);
+    } else {
+        console.log("✅ Eliminación exitosa");
+    }
+
+    if (error) {
+        return res.status(500).json({ error });
+    }
+
+    if (!data || data.length === 0) {
+        return res.status(404).json({ error: "Pedido no encontrado" });
+    }
+
+    res.json({
+        mensaje: "✅ Pedido eliminado con exito",
+        pedidos: data[0]
+    })
+});
 //definimos el puerto de nuestro servidor
 const PORT = 3000;
 app.listen(PORT, () => {
